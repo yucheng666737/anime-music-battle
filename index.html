@@ -109,10 +109,10 @@ textarea{width:100%;height:200px;background:var(--panel);border:1px solid var(--
 .bp-score i{color:#7b8696;font-style:normal;margin:0 1px}
 
 /* 勝利動畫 */
-.vcard.win-left{transform:translateX(calc(50% + 37px)) scale(1.05);transform-origin:center bottom;z-index:3}
-.vcard.win-right{transform:translateX(calc(-50% - 37px)) scale(1.05);transform-origin:center bottom;z-index:3}
+.vcard.win-left{transform:translateX(calc(50% + 37px)) scale(1.04);transform-origin:center center;z-index:3}
+.vcard.win-right{transform:translateX(calc(-50% - 37px)) scale(1.04);transform-origin:center center;z-index:3}
 .vcard.lose{opacity:0;transform:scale(.82);pointer-events:none}
-.divider.fade{opacity:0;transition:opacity .6s}
+.divider.fade{opacity:0;transition:opacity .45s}
 .reveal-note{display:inline-flex;align-items:center;gap:8px;color:#9aa4b4;font-size:14px;font-weight:600}
 
 /* round bar & tournament progress */
@@ -138,7 +138,7 @@ textarea{width:100%;height:200px;background:var(--panel);border:1px solid var(--
 
 /* arena */
 .arena{display:flex;align-items:stretch;gap:0}
-.vcard{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:11px;transition:transform 1.35s cubic-bezier(.22,1,.30,1), opacity 1s ease, border-color .2s, box-shadow .5s}
+.vcard{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:11px;transition:transform .9s cubic-bezier(.22,1,.30,1), opacity .7s ease, border-color .2s, box-shadow .4s}
 .vcard.left{border-top:3px solid var(--blue);animation:cardEnterL .42s cubic-bezier(.22,1,.36,1) backwards}
 .vcard.right{border-top:3px solid var(--red);animation:cardEnterR .42s cubic-bezier(.22,1,.36,1) .05s backwards}
 .vs-badge{animation:vsPop .4s cubic-bezier(.22,1,.36,1) .08s backwards}
@@ -250,7 +250,7 @@ textarea{width:100%;height:200px;background:var(--panel);border:1px solid var(--
   </div>
   <div class="header-right">
     <button type="button" class="key-btn" id="yt-key-btn" onclick="openYtKeyModal()">🔑 設定 YT 金鑰</button>
-    <span class="header-sub">OP · ED · 插曲 · 主題曲 · v17</span>
+    <span class="header-sub">OP · ED · 插曲 · 主題曲 · v18</span>
   </div>
 </header>
 <main id="app"></main>
@@ -696,7 +696,7 @@ function mountPlayers(leftVid, rightVid) {
   const make = () => {
     destroyPlayers();
     const mk = (side, vid) => ({
-      host: 'https://www.youtube-nocookie.com',
+      host: 'https://www.youtube.com',
       videoId: vid,
       playerVars: { rel: 0, playsinline: 1 },
       events: {
@@ -1245,7 +1245,7 @@ function championHTML(champ, nMatches, { isGuest = false } = {}) {
     <div class="champ-trophy" id="champ-trophy" title="點我再灑一次彩帶！">🏆</div>
     <div class="champ-label">冠軍</div>
     <h1 class="champ-title">${esc(champ?.title || '')}</h1>
-    ${vid ? `<div class="champ-embed"><iframe src="https://www.youtube-nocookie.com/embed/${vid}?rel=0" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>` : ''}
+    ${vid ? `<div class="champ-embed"><iframe src="https://www.youtube.com/embed/${vid}?rel=0" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>` : ''}
     <div class="champ-btns">${btns}</div>
     ${nMatches != null ? `<div style="color:#7b8696;font-size:13px;margin-top:6px">本局共進行 ${nMatches} 場對決 · 點擊獎盃可再放一次彩帶</div>` : ''}
   </div>`;
@@ -1558,14 +1558,17 @@ async function startHostGame(code, hostNick = '主持人', cap = LOBBY_CAP) {
   renderHost();
 }
 
-async function publishRound(status, extra = {}) {
+function buildRoundPayload(status, extra = {}) {
   const { a, b, roundSize, total } = gameInfo(HOST.game);
   const tp = tourneyProgress(HOST.game);
-  await set(ref(db, `rooms/${HOST.code}/round`), {
+  return {
     roundIdx: HOST.roundIdx, roundNo: HOST.game.roundNo, roundSize, total,
     matchIdx: HOST.game.matchIdx, doneMatches: tp.done, totalMatches: tp.total, isFinal: tp.isFinal,
     left: a || null, right: b || null, status, ...extra
-  });
+  };
+}
+async function publishRound(status, extra = {}) {
+  await set(ref(db, `rooms/${HOST.code}/round`), buildRoundPayload(status, extra));
 }
 
 function tallyVotes() {
@@ -1595,6 +1598,8 @@ function triggerReveal() {
   hostReveal();
 }
 
+const REVEAL_WAIT_MS = 2200; // 開票後 2.2 秒自動進下一場（0.9 秒滑到中央 + 1.3 秒看票數）
+
 async function hostReveal() {
   const sessionId = HOST.sessionId;
   try {
@@ -1608,21 +1613,23 @@ async function hostReveal() {
     const isTie = (left === right);
     const winnerSide = isTie ? (Math.random() < 0.5 ? 'left' : 'right') : (right > left ? 'right' : 'left');
     const players = HOST.players || {};
-    const upd = {};
+    const upd = { round: buildRoundPayload('revealed', { left, right, reroll, winnerSide, isTie }) };
     Object.entries(map).forEach(([pid, v]) => {
-      if (v === winnerSide && players[pid]) upd[`rooms/${HOST.code}/players/${pid}/score`] = (players[pid].score || 0) + 1;
+      if (v === winnerSide && players[pid]) upd[`players/${pid}/score`] = (players[pid].score || 0) + 1;
     });
-    if (Object.keys(upd).length) await update(ref(db), upd);
-    if (!HOST || HOST.sessionId !== sessionId) return;
     HOST.phase = 'revealed';
     HOST.result = { left, right, reroll, winnerSide, isTie };
-    await publishRound('revealed', { left, right, reroll, winnerSide, isTie });
-    if (!HOST || HOST.sessionId !== sessionId) return;
     renderHost();
     clearTimeout(HOST.nextTimer);
-    HOST.nextTimer = setTimeout(() => hostNext(sessionId), 3800);
+    HOST.nextTimer = setTimeout(() => hostNext(sessionId), REVEAL_WAIT_MS);
+    await update(ref(db, `rooms/${HOST.code}`), upd);
   } catch (e) {
-    if (HOST && HOST.sessionId === sessionId) HOST.revealing = false;
+    if (HOST && HOST.sessionId === sessionId) {
+      HOST.revealing = false;
+      HOST.phase = 'voting';
+      HOST.result = null;
+      clearTimeout(HOST.nextTimer);
+    }
     showToast(fbErrMsg(e, '開票失敗，請重試'));
   }
 }
@@ -1670,29 +1677,28 @@ async function hostNext(sessionId) {
   const latest = HOST.game.history[0];
   HOST.roundIdx++; HOST.votes = {}; HOST.phase = 'voting'; HOST.result = null; HOST.myVote = null; HOST.revealing = false;
   try {
+    const upd = {};
     if (latest) {
-      await set(ref(db, `rooms/${HOST.code}/history/${seq}`), {
+      upd[`history/${seq}`] = {
         seq,
         winner: { title: latest.winner.title },
         loser: { title: latest.loser.title },
         left: latest.left ?? null,
         right: latest.right ?? null,
         winnerSide: latest.winnerSide || null
-      });
+      };
     }
-    if (!HOST || HOST.sessionId !== sessionId) return;
     if (r) {
       HOST.phase = 'done';
       HOST.champion = r.champion;
-      await update(ref(db, `rooms/${HOST.code}`), {
-        'meta/status': 'done',
-        round: { roundIdx: HOST.roundIdx, status: 'done', champion: r.champion }
-      });
+      upd['meta/status'] = 'done';
+      upd.round = { roundIdx: HOST.roundIdx, status: 'done', champion: r.champion };
     } else {
       watchRoundVotes(HOST.code, HOST.roundIdx);
-      await publishRound('voting');
+      upd.round = buildRoundPayload('voting');
     }
-    if (HOST && HOST.sessionId === sessionId) renderHost();
+    renderHost();
+    await update(ref(db, `rooms/${HOST.code}`), upd);
   } catch (e) {
     showToast(fbErrMsg(e, '推進下一場失敗'));
   }
@@ -1746,7 +1752,11 @@ function renderHost() {
     HOST.renderedPhase = 'revealed';
     applyReveal(HOST.result.winnerSide, HOST.result.isTie);
     const hb = document.getElementById('host-bar');
-    if (hb) hb.innerHTML = `${resultBarsHTML(HOST.result.left, HOST.result.right, HOST.result.reroll)}<span class="reveal-note">⏳ 即將進入下一場…</span>`;
+    if (hb) {
+      hb.innerHTML = `${resultBarsHTML(HOST.result.left, HOST.result.right, HOST.result.reroll)}<button class="btn ghost sm" id="skip-next">⏭ 立即下一場</button>`;
+      const sn = hb.querySelector('#skip-next');
+      if (sn) sn.onclick = () => hostNext(HOST.sessionId);
+    }
     syncBottomPanel(players, HOST.game.history);
     return;
   }
@@ -1763,7 +1773,7 @@ function renderHost() {
   const llab = revealed && HOST.result.winnerSide === 'left' ? winLabelText(HOST.result.isTie) : '左方';
   const rlab = revealed && HOST.result.winnerSide === 'right' ? winLabelText(HOST.result.isTie) : '右方';
   const bar = revealed
-    ? `<div class="host-bar" id="host-bar">${resultBarsHTML(HOST.result.left, HOST.result.right, HOST.result.reroll)}<span class="reveal-note">⏳ 即將進入下一場…</span></div>`
+    ? `<div class="host-bar" id="host-bar">${resultBarsHTML(HOST.result.left, HOST.result.right, HOST.result.reroll)}<button class="btn ghost sm" id="skip-next">⏭ 立即下一場</button></div>`
     : `<div class="host-bar" id="host-bar"><span class="host-status">🕶️ 黑箱投票中 · 已收到 <b style="color:var(--gold)" id="vcount">${voteCount}</b> / <b id="pcount">${pc}</b> 票</span><button class="btn ghost" id="reveal">👁️ 提前開票</button></div>`;
   const tp = tourneyProgress(HOST.game);
   app.innerHTML = '';
@@ -1775,6 +1785,8 @@ function renderHost() {
   if (revealed) {
     [vl, vr, vrr, repl, repr].forEach(b2 => { if (b2) { b2.disabled = true; b2.style.opacity = .5; } });
     applyReveal(HOST.result.winnerSide, HOST.result.isTie);
+    const sn = el.querySelector('#skip-next');
+    if (sn) sn.onclick = () => hostNext(HOST.sessionId);
   } else {
     setVoteHighlight(el, HOST.myVote);
     const hostVote = async (side) => {
