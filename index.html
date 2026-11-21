@@ -418,8 +418,8 @@ async function ensureAuth() {
 
 function fbErrMsg(e, fallback) {
   const msg = e?.message || String(e || '');
-  if (/permission_denied/i.test(msg)) {
-    return `${fallback}：權限不足。請確認 Firebase Authentication 已啟用「匿名登入」且 Realtime Database 規則設定正確。`;
+  if (/permission[_ ]denied|admin-restricted-operation/i.test(msg)) {
+    return `${fallback}：權限不足。請確認 Firebase Authentication 已啟用「匿名登入」且 Realtime Database 規則已發布。`;
   }
   return `${fallback}：${msg}`;
 }
@@ -439,13 +439,14 @@ function ytVideoId(url = '') {
   return null;
 }
 
-// 只把真正的播放清單網址當作清單；若同時帶有影片 ID（例如 watch?v=...&list=RD...）則視為單支影片
+// 辨識播放清單網址（包含 watch?v=...&list=PL...）；但若是 YouTube 自動合輯 Mix (RD/WL/LL/LM) 且帶有單支影片 ID，則當作單支影片處理避免 API 404
 function ytPlaylistId(url = '') {
   const s = url.trim();
   const m = s.match(/[?&]list=([\w-]+)/);
   if (!m) return null;
-  if (/\/playlist\b/i.test(s) || !ytVideoId(s)) return m[1];
-  return null;
+  const pid = m[1];
+  if (/^(RD|LL|WL|LM)/.test(pid) && ytVideoId(s)) return null;
+  return pid;
 }
 
 async function fetchJsonChecked(url) {
