@@ -24,17 +24,28 @@ a{color:var(--blue)}
 code{background:var(--panel2);padding:2px 7px;border-radius:5px;color:var(--gold);font-size:13px}
 
 /* header */
-header{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(10,14,22,.85);backdrop-filter:blur(8px);z-index:30}
-.brand{display:flex;align-items:center;gap:10px;cursor:pointer}
+header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:9px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(10,14,22,.88);backdrop-filter:blur(8px);z-index:30}
+.brand{display:flex;align-items:center;gap:10px;cursor:pointer;justify-self:start}
 .logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--red));display:grid;place-items:center;color:#fff;font-weight:900}
 .brand-text{font-weight:900;letter-spacing:.5px;font-size:17px}
-.header-right{display:flex;align-items:center;gap:12px}
+.header-round{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;justify-self:center;text-align:center}
+.header-round.empty{visibility:hidden}
+.hr-strong{font-size:28px;font-weight:900;color:var(--gold);line-height:1.05;letter-spacing:.5px}
+.hr-prog{font-size:14px;color:#b4bfd0;font-weight:700;line-height:1.1}
+.header-right{display:flex;align-items:center;gap:12px;justify-self:end}
 .header-sub{font-size:12px;color:#7b8696;letter-spacing:1px}
-@media(max-width:640px){.header-sub{display:none}}
+@media(max-width:900px){.header-sub{display:none}}
+@media(max-width:680px){
+  header{grid-template-columns:1fr auto;row-gap:6px;padding:10px 14px}
+  .header-round{grid-column:1 / -1;order:3;flex-direction:row;align-items:baseline;gap:10px}
+  .header-round.empty{display:none}
+  .hr-strong{font-size:22px}
+  .hr-prog{font-size:13px}
+}
 .key-btn{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);color:#cdd6e2;padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:700}
 .key-btn.ready{border-color:rgba(90,208,138,.55);color:#9be8bf}
 .inline-link{background:none;border:none;color:var(--gold);font-size:inherit;font-weight:700;text-decoration:underline;padding:0}
-main{max-width:1900px;margin:0 auto;padding:26px 18px 60px}
+main{max-width:1900px;margin:0 auto;padding:18px 18px 60px}
 
 /* modal */
 .modal-bg{position:fixed;inset:0;background:rgba(4,7,14,.72);backdrop-filter:blur(4px);display:grid;place-items:center;padding:16px;z-index:80}
@@ -115,18 +126,10 @@ textarea{width:100%;height:200px;background:var(--panel);border:1px solid var(--
 .divider.fade{opacity:0;transition:opacity .45s}
 .reveal-note{display:inline-flex;align-items:center;gap:8px;color:#9aa4b4;font-size:14px;font-weight:600}
 
-/* round bar & tournament progress */
-.round-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.round-center{text-align:center;display:flex;flex-direction:column;gap:2px}
-.round-strong{font-size:22px;font-weight:900;color:var(--gold);line-height:1}
-.round-prog{font-size:12.5px;color:var(--muted)}
+/* round bar */
+.round-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .round-extra{min-width:90px;text-align:right}
 .live-tag{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#9aa4b4;font-weight:700}
-.tourney-prog{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.tourney-track{flex:1;height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;border:1px solid rgba(38,48,63,.7)}
-.tourney-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--blue),var(--gold),var(--red));transition:width .55s cubic-bezier(.22,1,.36,1)}
-.tourney-meta{font-size:12px;color:#9aa4b4;font-weight:700;white-space:nowrap}
-.tourney-meta b{color:var(--gold)}
 
 /* 進場轉場微動畫（僅用 backwards，播完釋放 transform 權限不影響勝利滑動動畫） */
 @keyframes cardEnterL{from{opacity:0;transform:translateX(-22px) scale(.985)}to{opacity:1;transform:none}}
@@ -248,9 +251,10 @@ textarea{width:100%;height:200px;background:var(--panel);border:1px solid var(--
   <div class="brand" onclick="goHome()">
     <div class="logo">♛</div><span class="brand-text">動漫神曲二選一</span>
   </div>
+  <div class="header-round empty" id="header-round"></div>
   <div class="header-right">
     <button type="button" class="key-btn" id="yt-key-btn" onclick="openYtKeyModal()">🔑 設定 YT 金鑰</button>
-    <span class="header-sub">OP · ED · 插曲 · 主題曲 · v18</span>
+    <span class="header-sub">OP · ED · 插曲 · 主題曲 · v19</span>
   </div>
 </header>
 <main id="app"></main>
@@ -830,6 +834,19 @@ function launchConfetti() {
   confettiRaf = requestAnimationFrame(tick);
 }
 
+const headerRoundEl = document.getElementById('header-round');
+function setHeaderRound(roundSize, matchIdx, total) {
+  if (!headerRoundEl) return;
+  if (!roundSize) {
+    headerRoundEl.innerHTML = '';
+    headerRoundEl.classList.add('empty');
+    return;
+  }
+  const title = roundSize === 2 ? '🔥 總決賽' : `${roundSize} 強`;
+  headerRoundEl.innerHTML = `<span class="hr-strong">${title}</span><span class="hr-prog">第 ${(matchIdx ?? 0) + 1} / ${total ?? ''} 場</span>`;
+  headerRoundEl.classList.remove('empty');
+}
+
 function clearListener() {
   if (HOST?.nextTimer) { clearTimeout(HOST.nextTimer); HOST.nextTimer = null; }
   if (HOST) HOST.sessionId = null;
@@ -837,6 +854,7 @@ function clearListener() {
   unsubs.splice(0).forEach(u => { try { u(); } catch (_) {} });
   destroyPlayers();
   stopConfetti();
+  setHeaderRound(null);
 }
 
 function clearRoomParam() {
@@ -1042,25 +1060,6 @@ function gameInfo(g) {
   const roundSize = g.contestants.length, total = Math.floor(roundSize / 2);
   return { roundSize, total, a: g.contestants[g.matchIdx * 2], b: g.contestants[g.matchIdx * 2 + 1] };
 }
-// 計算整體淘汰賽進度（單敗淘汰賽總場次永遠等於存活總曲數 - 1 + 已完成場次）
-function tourneyProgress(g) {
-  const done = g.history ? g.history.length : 0;
-  const alive = (g.next ? g.next.length : 0) + Math.max(0, g.contestants.length - g.matchIdx * 2);
-  const total = Math.max(1, done + Math.max(0, alive - 1));
-  const pct = Math.min(100, Math.round((done / total) * 100));
-  return { done, total, pct, isFinal: alive <= 2 };
-}
-function tourneyBarHTML(done, total, isFinal = false) {
-  if (!total || total < 1) return '';
-  const pct = Math.min(100, Math.round((done / total) * 100));
-  const label = isFinal
-    ? `🔥 總決賽 · <b>${done + 1} / ${total}</b> 場`
-    : `總賽程 <b>${done} / ${total}</b> 場（${pct}%）`;
-  return `<div class="tourney-prog" aria-label="整體賽程進度">
-    <div class="tourney-track"><div class="tourney-fill" style="width:${pct}%"></div></div>
-    <span class="tourney-meta">${label}</span>
-  </div>`;
-}
 // 推進；回傳 {champion} 或 null
 function advance(g, winnerSide) {
   const { roundSize, total, a, b } = gameInfo(g);
@@ -1156,10 +1155,9 @@ function setVoteHighlight(el, side) {
   if (cr) cr.classList.toggle('voted', side === 'right');
 }
 
-function roundBarHTML(roundSize, matchIdx, total, extra) {
+function roundBarHTML(extra) {
   return `<div class="round-bar">
     <button class="link" id="exit">← 離開</button>
-    <div class="round-center"><span class="round-strong">${roundSize} 強</span><span class="round-prog">第 ${matchIdx + 1} / ${total} 場</span></div>
     <div class="round-extra">${extra || ''}</div>
   </div>`;
 }
@@ -1268,9 +1266,9 @@ function startSingle(cap = SINGLE_CAP) {
 function renderSingle() {
   clearListener();
   const { roundSize, total, a, b } = gameInfo(SG);
-  const tp = tourneyProgress(SG);
+  setHeaderRound(roundSize, SG.matchIdx, total);
   app.innerHTML = '';
-  const el = $(`<div class="stage">${roundBarHTML(roundSize, SG.matchIdx, total, '')}${tourneyBarHTML(tp.done, tp.total, tp.isFinal)}${arenaHTML(a, b, '左方', '右方', { canReroll: (roundSize - SG.matchIdx * 2) > 2, showReplace: true, canReplace: canReplaceSong(SG) })}${bottomPanel(null, SG.history)}</div>`);
+  const el = $(`<div class="stage">${roundBarHTML('')}${arenaHTML(a, b, '左方', '右方', { canReroll: (roundSize - SG.matchIdx * 2) > 2, showReplace: true, canReplace: canReplaceSong(SG) })}${bottomPanel(null, SG.history)}</div>`);
   app.appendChild(el);
   mountPlayers(a.videoId, b.videoId);
   el.querySelector('#exit').onclick = () => {
@@ -1300,6 +1298,7 @@ function renderSingle() {
 function renderChampionSingle(champ) {
   destroyPlayers();
   clearSingleProgress();
+  setHeaderRound(null);
   app.innerHTML = '';
   const el = $(`<div class="stage">${championHTML(champ, SG.history.length)}${bottomPanel(null, SG.history)}</div>`);
   app.appendChild(el);
@@ -1560,10 +1559,9 @@ async function startHostGame(code, hostNick = '主持人', cap = LOBBY_CAP) {
 
 function buildRoundPayload(status, extra = {}) {
   const { a, b, roundSize, total } = gameInfo(HOST.game);
-  const tp = tourneyProgress(HOST.game);
   return {
     roundIdx: HOST.roundIdx, roundNo: HOST.game.roundNo, roundSize, total,
-    matchIdx: HOST.game.matchIdx, doneMatches: tp.done, totalMatches: tp.total, isFinal: tp.isFinal,
+    matchIdx: HOST.game.matchIdx,
     left: a || null, right: b || null, status, ...extra
   };
 }
@@ -1725,6 +1723,7 @@ function renderHost() {
   if (HOST.phase === 'done') {
     if (HOST.renderedRoundIdx === -2) { syncBottomPanel(players, HOST.game.history); return; }
     destroyPlayers();
+    setHeaderRound(null);
     const champ = HOST.champion;
     app.innerHTML = '';
     const el = $(`<div class="stage">${championHTML(champ, HOST.game.history.length)}${bottomPanel(players, HOST.game.history)}</div>`);
@@ -1775,9 +1774,9 @@ function renderHost() {
   const bar = revealed
     ? `<div class="host-bar" id="host-bar">${resultBarsHTML(HOST.result.left, HOST.result.right, HOST.result.reroll)}<button class="btn ghost sm" id="skip-next">⏭ 立即下一場</button></div>`
     : `<div class="host-bar" id="host-bar"><span class="host-status">🕶️ 黑箱投票中 · 已收到 <b style="color:var(--gold)" id="vcount">${voteCount}</b> / <b id="pcount">${pc}</b> 票</span><button class="btn ghost" id="reveal">👁️ 提前開票</button></div>`;
-  const tp = tourneyProgress(HOST.game);
+  setHeaderRound(roundSize, HOST.game.matchIdx, total);
   app.innerHTML = '';
-  const el = $(`<div class="stage" id="host-arena">${roundBarHTML(roundSize, HOST.game.matchIdx, total, extra)}${tourneyBarHTML(tp.done, tp.total, tp.isFinal)}${arenaHTML(a, b, llab, rlab, { canReroll: (roundSize - HOST.game.matchIdx * 2) > 2, showReplace: true, canReplace: canReplaceSong(HOST.game) })}${bar}${bottomPanel(players, HOST.game.history)}</div>`);
+  const el = $(`<div class="stage" id="host-arena">${roundBarHTML(extra)}${arenaHTML(a, b, llab, rlab, { canReroll: (roundSize - HOST.game.matchIdx * 2) > 2, showReplace: true, canReplace: canReplaceSong(HOST.game) })}${bar}${bottomPanel(players, HOST.game.history)}</div>`);
   app.appendChild(el);
   mountPlayers(a.videoId, b.videoId);
   const vl = el.querySelector('#vote-l'), vr = el.querySelector('#vote-r'), vrr = el.querySelector('#vote-reroll');
@@ -1884,6 +1883,7 @@ function guestRoom(code, nick) {
   function renderGuest(round) {
     if (round.status === 'done') {
       destroyPlayers();
+      setHeaderRound(null);
       app.innerHTML = '';
       const el = $(`<div class="stage">${championHTML(round.champion, gHist.length, { isGuest: true })}${bottomPanel(gPlayers, gHist)}</div>`);
       app.appendChild(el);
@@ -1899,14 +1899,13 @@ function guestRoom(code, nick) {
     const status = revealed ? resultBarsHTML(round.left, round.right, round.reroll)
       : myVote ? `<span class="host-status">✓ 已投票，等待主持人開票…</span>`
       : `<span class="host-status">🕗 請選擇你支持的一首</span>`;
+    setHeaderRound(round.roundSize, round.matchIdx, round.total);
     app.innerHTML = '';
     const el = $(`<div class="stage">
       <div class="guest-bar">
         <span class="live-tag"><span class="dot"></span> 房 ${esc(code)} · ${esc(nick)}</span>
-        <span class="guest-progress"><b>${round.roundSize ?? ''} 強</b> · 第 ${(round.matchIdx ?? 0) + 1} / ${round.total ?? ''} 場</span>
         <span class="guest-round">第 ${round.roundNo} 輪</span>
       </div>
-      ${tourneyBarHTML(round.doneMatches ?? 0, round.totalMatches ?? 0, !!round.isFinal)}
       ${arenaHTML(a, b, llab, rlab, { canReroll: ((round.roundSize || 0) - (round.matchIdx || 0) * 2) > 2 })}
       <div class="guest-status" id="gs">${status}</div>
       ${bottomPanel(gPlayers, gHist)}
@@ -1935,6 +1934,7 @@ function guestRoom(code, nick) {
 }
 
 function renderGuestWait(code, nick, connected, onLeave) {
+  setHeaderRound(null);
   app.innerHTML = '';
   const el = $(`<div class="wait"><span class="dot" style="width:14px;height:14px"></span><h2>${connected ? '已連線，等待主持人開始…' : '連線中…'}</h2><p>房號 ${esc(code)} · 暱稱 ${esc(nick)}</p><button class="btn ghost" id="leave">離開</button></div>`);
   app.appendChild(el);
