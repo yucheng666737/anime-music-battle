@@ -1,0 +1,35 @@
+{
+  "rules": {
+    "rooms": {
+      "$code": {
+        ".write": "auth != null && ((!data.exists() && newData.child('meta/host').val() == auth.uid) || (data.exists() && data.child('meta/host').val() == auth.uid))",
+        "meta": {
+          ".read": "auth != null"
+        },
+        "players": {
+          ".read": "auth != null",
+          "$uid": {
+            ".write": "auth != null && auth.uid == $uid && root.child('rooms/' + $code + '/meta').exists()",
+            ".validate": "newData.hasChildren(['nick']) && newData.child('nick').isString() && newData.child('nick').val().length <= 20 && (root.child('rooms/' + $code + '/meta/host').val() == auth.uid || (!data.exists() && newData.child('score').val() == 0) || (data.exists() && newData.child('score').val() == data.child('score').val()))"
+          }
+        },
+        "round": {
+          ".read": "auth != null"
+        },
+        "history": {
+          ".read": "auth != null"
+        },
+        "votes": {
+          ".read": "auth != null && root.child('rooms/' + $code + '/meta/host').val() == auth.uid",
+          "$roundIdx": {
+            "$uid": {
+              ".read": "auth != null && auth.uid == $uid",
+              ".write": "auth != null && auth.uid == $uid && root.child('rooms/' + $code + '/round/status').val() == 'voting'",
+              ".validate": "newData.val() == 'left' || newData.val() == 'right' || newData.val() == 'reroll'"
+            }
+          }
+        }
+      }
+    }
+  }
+}
