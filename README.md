@@ -2,7 +2,7 @@
 
 純前端靜態網頁版的「動漫神曲二選一」淘汰賽——把喜歡的 OP / ED / 插曲兩兩對決，一路淘汰選出冠軍！支援**單人模式**與 **Firebase 即時多人黑箱投票房**。
 
-👉 **線上遊玩（Live Demo）**：<https://yucheng666737.github.io/anime-music-battle/>
+👉 **線上遊玩（Live Demo）**：<https://woodycheng987.github.io/anime-music-battle/>
 
 ---
 
